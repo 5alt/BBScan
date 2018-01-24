@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 #
 #  Common functions
 #
@@ -6,6 +7,7 @@
 import time
 import urlparse
 import re
+import os
 
 
 def print_msg(msg):
@@ -93,3 +95,102 @@ def get_domain_sub(host):
         return ''
     else:
         return host.split('.')[0]
+
+def check_server(rsp_server):
+    if not rsp_server: return 'unknown'
+
+    rsp_server = rsp_server.lower()
+
+    common_server = ['iis', 'tomcat', 'nginx', 'apache', 'tengine', 'express']
+    for s in common_server:
+        if s in rsp_server:
+            return s
+
+    return 'unknown'
+
+def check_lang(base_url, rsp_headers):
+    '''
+    :param url: 扫描站点的一个url
+    :return: php python nodejs unknown
+    '''
+    # dectect webserver
+
+    # 通过session名比较
+    # laravel_session 是laravel的session
+    # ci_session 是CI的
+    php_session = [('php', 'phpsessid'), ('ci', 'ci_session'), ('cakephp','cakephp'), ('laravel', 'laravel_session')]
+    cookies =  rsp_headers.get('set-cookie', '').lower()
+    for (n, s) in php_session:
+        if s in cookies:
+            return 'php', n
+
+    # 通过x-powered-by比较
+    rsp_powerby = rsp_headers.get('x-powered-by', '').lower()
+    if 'php' in rsp_powerby:
+        return 'php', 'php'
+
+    if 'express' in rsp_powerby:
+        return 'nodejs', 'express'
+
+    # 不能分辨的最后判断
+    if 'nodesess' in cookies:
+        return 'nodejs', 'nodejs'
+    
+    # 区分php java other
+    # 通过server比较
+    rsp_server = rsp_headers.get('server', '').lower()
+
+    if rsp_server:
+        # 有待考证
+        python_server = ['tornado', 'wsgi', 'flask', 'django', 'werkzeug', 'gunicorn', 'gevent', 'python']
+        for s in python_server:
+            if s in rsp_server:
+                return 'python', s
+
+        java_server = ['jetty', 'tomcat', 'coyote', 'jboss', 'glassfish', 'wildfly', 'tomee', 'geronimo', 'jonas', 'resin', 'blazix']
+        for s in java_server:
+            if s in rsp_server:
+                return 'java', s
+
+        iis_server = ['iis', 'microsoft'] # asp 没有url重新的情况，上面已经做判断
+        for s in iis_server:
+            if s in rsp_server:
+                return 'aspx', 'unknown'
+
+        r = requests.get(base_url + '/index.php')
+        rb = requests.get(base_url)
+        # 通过加index.php和不加index.php比较
+        if difflib.SequenceMatcher(None, rb.text, r.text).ratio() > 0.9 and r.status_code == rb.status_code:
+            return 'php', 'php'
+
+        if 'apache' in rsp_server: # python/nodejs 等一定不是apache，只可能是静态或者java或者php，不管静态
+            return 'java', 'unknown'
+
+        # nginx 经常作为cdn，判断出错概率大
+
+    return 'unknown', 'unknown'
+
+def check_lang_url(url):
+    parts = urlparse.urlparse(url)
+    path = parts.path
+    ext = os.path.splitext(path)[1]
+    if ext:
+        if ext in ['.do', '.action']:
+            return 'java'
+        if ext in ['.php']:
+            return 'php'
+        if ext in ['.asp']:
+            return 'asp'
+        if ext in ['.aspx']:
+            return 'aspx'
+    return 'unknown'
+
+
+def check_rewrite(server, lang):
+    if lang in ['java', 'python', 'nodejs']:
+        return True
+
+    if server not in ['apache', 'nginx', 'tengine', 'iis']:
+        return True
+
+    return False

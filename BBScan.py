@@ -24,7 +24,7 @@ import traceback
 import struct
 import importlib
 from dns.resolver import Resolver
-from lib.common import print_msg, parse_url, decode_response_text, cal_depth, get_domain_sub
+from lib.common import print_msg, parse_url, decode_response_text, cal_depth, get_domain_sub, check_server, check_lang, check_lang_url, check_rewrite
 from lib.cmdline import parse_args
 from lib.report import template
 from lib.connectionPool import HTTPConnPool, HTTPSConnPool
@@ -73,6 +73,9 @@ class InfoDisScanner(object):
         self._404_status = -1
         self.conn_pool = None
         self.index_status, self.index_headers, self.index_html_doc = None, {} , ''
+        self.rewrite = False
+        self.server = ''
+        self.lang = ''
 
     # scan from a given URL
     def init_from_url(self, url):
@@ -136,11 +139,15 @@ class InfoDisScanner(object):
             self.check_404()    # check existence of HTTP 404
         if not self.has_404:
             print_msg('[Warning] %s has no HTTP 404.' % self.host)
+
+        self.request_index(self.path)
+        self.gather_info()
+
         _path, _depth = cal_depth(self, self.path)
         self._enqueue('/')
         self._enqueue(_path)
         if not self.args.no_crawl and not self.log_file:
-            self.crawl_index(_path)
+            self.crawl_index()
 
     def is_port_open(self):
         try:
@@ -184,6 +191,7 @@ class InfoDisScanner(object):
         p_status = re.compile('{status=(\d{3})}')
         p_content_type = re.compile('{type="(.*?)"}')
         p_content_type_no = re.compile('{type_no="(.*?)"}')
+        p_lang = re.compile('{lang="(.*?)"}')
 
         for rule_file in glob.glob('rules/*.txt'):
             with open(rule_file, 'r') as infile:
@@ -202,9 +210,14 @@ class InfoDisScanner(object):
                         _ = p_content_type_no.search(url)
                         content_type_no = _.group(1) if _ else ''
 
+                        _ = p_lang.search(url)
+                        lang = _.group(1) if _ else ''
+
                         root_only = True if url.find('{root_only}') >= 0 else False
 
-                        rule = (url.split()[0], tag, status, content_type, content_type_no, root_only)
+                        rewrite = True if url.find('{rewrite}') >= 0 else False
+
+                        rule = (url.split()[0], tag, status, content_type, content_type_no, root_only, lang, rewrite)
                         if rule not in self.rules_set:
                             self.rules_set.add(rule)
                         else:
@@ -312,6 +325,14 @@ class InfoDisScanner(object):
                 self.urls_processed.add(url_pattern)
             # print 'Entered Queue:', url
             for _ in self.rules_set:
+                # rewrite & lang check
+                if self.rewrite and not _[7]:
+                    continue
+                elif self.lang and self.lang != 'unknown':
+                    if _[6] and self.lang != _[6]:
+                        continue
+
+                # root_only
                 if _[5] and url != '/':
                     continue
                 try:
@@ -336,7 +357,7 @@ class InfoDisScanner(object):
             return False
 
     #
-    def crawl_index(self, path):
+    def request_index(self, path):
         try:
             status, headers, html_doc = self._http_request(path)
             if status != 200:
@@ -346,23 +367,41 @@ class InfoDisScanner(object):
                 except Exception as e:
                     pass
             self.index_status, self.index_headers, self.index_html_doc = status, headers, html_doc    # save index content
-            soup = BeautifulSoup(html_doc, "html.parser")
+        except Exception as e:
+            logging.error('[request_index Exception] %s' % str(e))
+            traceback.print_exc()
+
+    def gather_info(self):
+        if not self.server:
+            self.server = check_server(self.index_headers.get('server', ''))
+
+        if not self.lang:
+            self.lang, self.framework = check_lang(self.base_url, self.index_headers)
+
+        if self.lang == 'unknown':
+            soup = BeautifulSoup(self.index_html_doc, "html.parser")
             for link in soup.find_all('a'):
                 url = link.get('href', '').strip()
-                url, depth = cal_depth(self, url)
-                if depth <= self.max_depth:
-                    self._enqueue(url)
-            if self.find_text(html_doc):
-                self.results['/'] = []
-                m = re.search('<title>(.*?)</title>', html_doc)
-                title = m.group(1) if m else ''
-                _ = {'status': status, 'url': '%s%s' % (self.base_url, path), 'title': title}
-                if _ not in self.results['/']:
-                    self.results['/'].append(_)
+                lang = check_lang_url(url)
+                if lang != 'unknown':
+                    self.lang = lang
+                    break
+        self.rewrite = check_rewrite(self.server, self.lang)
 
-        except Exception as e:
-            logging.error('[crawl_index Exception] %s' % str(e))
-            traceback.print_exc()
+    def crawl_index(self):
+        soup = BeautifulSoup(self.index_html_doc, "html.parser")
+        for link in soup.find_all('a'):
+            url = link.get('href', '').strip()
+            url, depth = cal_depth(self, url)
+            if depth <= self.max_depth:
+                self._enqueue(url)
+        if self.find_text(self.index_html_doc):
+            self.results['/'] = []
+            m = re.search('<title>(.*?)</title>', self.index_html_doc)
+            title = m.group(1) if m else ''
+            _ = {'status': status, 'url': '%s%s' % (self.base_url, path), 'title': title}
+            if _ not in self.results['/']:
+                self.results['/'].append(_)
 
     #
     def load_all_urls_from_log_file(self):
@@ -436,7 +475,7 @@ class InfoDisScanner(object):
             if not item or not url:
                 break
 
-            # print '[%s]' % url.strip()
+            print '[%s]' % url.strip()
             try:
                 status, headers, html_doc = self._http_request(url)
                 cur_content_type = headers.get('content-type', '')
