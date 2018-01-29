@@ -6,7 +6,7 @@ from lib.common import save_user_script_result
 
 
 def do_check(self, url):
-    if url == '/' and self.conn_pool:
+    if url == '/' and self.conn_pool and self.server == 'iis':
         if self.index_status == 302 and self.index_headers.get('location', '').lower() == 'https://%s/owa' % self.host:
             save_user_script_result(self, 302, 'https://%s' % self.host, 'OutLook Web APP Found')
             return

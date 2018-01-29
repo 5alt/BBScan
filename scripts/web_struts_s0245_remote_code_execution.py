@@ -5,10 +5,16 @@ from lib.common import save_user_script_result
 
 
 def do_check(self, url):
-    if url != '/' and not url.endswith('.action') and not url.endswith('.do'):
-        return
     if not self.conn_pool:
         return
+    url = ""
+    for a in self.index_a_urls:
+        if a.endswith('.action') or a.endswith('.do'):
+            url = a
+            break
+    if not url:
+        return
+
     cmd = 'env'
     headers = {}
     headers['User-Agent'] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) " \

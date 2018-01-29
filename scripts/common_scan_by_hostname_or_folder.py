@@ -25,7 +25,7 @@ from lib.common import save_user_script_result
 
 
 def do_check(self, url):
-    if not self.conn_pool:
+    if not self.conn_pool or self.rewrite:
         return
     extensions = ['.zip', '.rar', '.tar.gz', '.tar.bz2', '.tgz', '.7z', '.log']
 
@@ -40,8 +40,8 @@ def do_check(self, url):
 
     elif url != '/':
         # sub folders like /aaa/bbb/
-        folder_name = url.split('/')[-2]
-        url_prefix = url[: -len(folder_name)-1]
+        folder_name = url.split('/')[-1]
+        url_prefix = url[: -len(folder_name)]
         for ext in extensions:
             status, headers, html_doc = self._http_request(url_prefix + folder_name + ext)
             if status == 206 and headers.get('content-type', '').find('application/octet-stream') >= 0:

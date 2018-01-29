@@ -1,0 +1,3 @@
+/etc/passwd            {tag="root:x:"}
+/proc/meminfo          {tag="MemTotal"}  {status=200}                 {root_only}
+/etc/profile           {tag="/etc/profile.d/*.sh"}  {status=200}      {root_only}

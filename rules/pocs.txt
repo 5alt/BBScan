@@ -1,0 +1,4 @@
+/javax.faces.resource.../WEB-INF/web.xml.jsf    {status=200}    {type="xml"}    {tag="<?xml"}    {root_only}    {lang="java"}    {rewrite}
+/resource/tutorial/jndi-appconfig/test?inputFile=/etc/passwd      {tag="root:x:"}    {root_only}
+# graphite_ssrf
+/composer/send_email?to=orangetest@nogg&url=http://wwwwwwwwwwwww.cctvasdfasfsaasfasfs.com   {status=200}  {tag="gaierror: [Errno -2]"}     {root_only}    {lang="python"}    {rewrite}

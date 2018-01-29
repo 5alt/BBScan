@@ -8,6 +8,8 @@ import time
 import urlparse
 import re
 import os
+import requests
+import difflib
 
 
 def print_msg(msg):
@@ -132,6 +134,9 @@ def check_lang(base_url, rsp_headers):
     if 'express' in rsp_powerby:
         return 'nodejs', 'express'
 
+    if 'asp.net' in rsp_powerby:
+        return 'aspx', 'aspx'
+
     # 不能分辨的最后判断
     if 'nodesess' in cookies:
         return 'nodejs', 'nodejs'
@@ -175,7 +180,7 @@ def check_lang_url(url):
     path = parts.path
     ext = os.path.splitext(path)[1]
     if ext:
-        if ext in ['.do', '.action']:
+        if ext in ['.do', '.action', 'jsp', 'jspx']:
             return 'java'
         if ext in ['.php']:
             return 'php'

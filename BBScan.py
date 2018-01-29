@@ -68,6 +68,8 @@ class InfoDisScanner(object):
         self.url_queue.queue.clear()
         self.urls_processed = set()
         self.urls_enqueued = set()
+        self.index_a_urls = set()
+        self.scripts_enqueued = set()
         self.results = {}
         self.log_file = None
         self._404_status = -1
@@ -120,14 +122,6 @@ class InfoDisScanner(object):
             else:
                 self.conn_pool = HTTPConnPool(self.host, port=self.port, maxsize=self.args.t * 2, headers=headers)
 
-        if self.args.scripts_only or not is_port_open and (not self.args.no_scripts):
-            for _ in self.user_scripts:
-                self.url_queue.put((_, '/'))
-            self.lock.acquire()
-            print_msg('Scan with user scripts: %s' % self.host)
-            self.lock.release()
-            return
-
         if not is_port_open:
             return
 
@@ -178,6 +172,39 @@ class InfoDisScanner(object):
                     break
         return parse_url(url)
 
+    def _load_rules(self, rule_file):
+        rules = []
+        p_tag = re.compile('{tag="(.*?)"}')
+        p_status = re.compile('{status=(\d{3})}')
+        p_content_type = re.compile('{type="(.*?)"}')
+        p_content_type_no = re.compile('{type_no="(.*?)"}')
+        p_lang = re.compile('{lang="(.*?)"}')
+        with open(rule_file, 'r') as infile:
+            for url in infile.xreadlines():
+                url = url.strip()
+                if url.startswith('/'):
+                    _ = p_tag.search(url)
+                    tag = _.group(1) if _ else ''
+
+                    _ = p_status.search(url)
+                    status = int(_.group(1)) if _ else 0
+
+                    _ = p_content_type.search(url)
+                    content_type = _.group(1) if _ else ''
+
+                    _ = p_content_type_no.search(url)
+                    content_type_no = _.group(1) if _ else ''
+
+                    _ = p_lang.search(url)
+                    lang = _.group(1) if _ else ''
+
+                    root_only = True if url.find('{root_only}') >= 0 else False
+
+                    rewrite = True if url.find('{rewrite}') >= 0 else False
+
+                    rule = (url.split()[0], tag, status, content_type, content_type_no, root_only, lang, rewrite)
+                    rules.append(rule)
+        return rules
     #
     # load urls from rules/*.txt
     def _init_rules(self):
@@ -187,41 +214,13 @@ class InfoDisScanner(object):
         self.regex_to_exclude = []
         self.rules_set = set()
 
-        p_tag = re.compile('{tag="(.*?)"}')
-        p_status = re.compile('{status=(\d{3})}')
-        p_content_type = re.compile('{type="(.*?)"}')
-        p_content_type_no = re.compile('{type_no="(.*?)"}')
-        p_lang = re.compile('{lang="(.*?)"}')
-
         for rule_file in glob.glob('rules/*.txt'):
-            with open(rule_file, 'r') as infile:
-                for url in infile.xreadlines():
-                    url = url.strip()
-                    if url.startswith('/'):
-                        _ = p_tag.search(url)
-                        tag = _.group(1) if _ else ''
-
-                        _ = p_status.search(url)
-                        status = int(_.group(1)) if _ else 0
-
-                        _ = p_content_type.search(url)
-                        content_type = _.group(1) if _ else ''
-
-                        _ = p_content_type_no.search(url)
-                        content_type_no = _.group(1) if _ else ''
-
-                        _ = p_lang.search(url)
-                        lang = _.group(1) if _ else ''
-
-                        root_only = True if url.find('{root_only}') >= 0 else False
-
-                        rewrite = True if url.find('{rewrite}') >= 0 else False
-
-                        rule = (url.split()[0], tag, status, content_type, content_type_no, root_only, lang, rewrite)
-                        if rule not in self.rules_set:
-                            self.rules_set.add(rule)
-                        else:
-                            print 'Dumplicated Rule:', rule
+            rules = self._load_rules(rule_file)
+            for rule in rules:
+                if rule not in self.rules_set:
+                    self.rules_set.add(rule)
+                else:
+                    print 'Dumplicated Rule:', rule
 
         re_text = re.compile('{text="(.*)"}')
         re_regex_text = re.compile('{regex_text="(.*)"}')
@@ -277,7 +276,7 @@ class InfoDisScanner(object):
                 _ = importlib.import_module('scripts.%s' % script_name)
                 self.user_scripts.append(_)
             except Exception as e:
-                pass
+                print e
 
     #
     def _http_request(self, url, timeout=30):
@@ -314,6 +313,24 @@ class InfoDisScanner(object):
         except Exception as e:
             logging.error('[Check_404] Exception %s' % str(e))
 
+    def _enqueue_request(self, prefix, full_url, rule):
+        if self.args.scripts_only:
+            return
+        if full_url in self.urls_enqueued:
+            return
+        url_description = {'prefix': prefix, 'full_url': full_url}
+        item = (url_description, rule[1], rule[2], rule[3], rule[4], rule[5], rule[6], rule[7])
+        self.url_queue.put(item)
+        self.urls_enqueued.add(full_url)
+
+    def _enqueue_script(self, module, prefix):
+        if self.args.no_scripts:
+            return
+        if not prefix: prefix = '/'
+        if (module.__name__, prefix) in self.scripts_enqueued: return
+        self.url_queue.put((module, prefix))
+        self.scripts_enqueued.add((module.__name__, prefix))
+
     #
     def _enqueue(self, url):
         try:
@@ -335,22 +352,16 @@ class InfoDisScanner(object):
                 # root_only
                 if _[5] and url != '/':
                     continue
-                try:
-                    full_url = url.rstrip('/') + _[0]
-                except:
-                    continue
-                if full_url in self.urls_enqueued:
-                    continue
-                url_description = {'prefix': url.rstrip('/'), 'full_url': full_url}
-                item = (url_description, _[1], _[2], _[3], _[4], _[5])
-                self.url_queue.put(item)
-                self.urls_enqueued.add(full_url)
+
+                full_url = url.rstrip('/') + _[0]
+                self._enqueue_request(url.rstrip('/'), full_url, _)
 
             if self.full_scan and url.count('/') >= 2:
                 self._enqueue('/'.join(url.split('/')[:-2]) + '/')  # sub folder enqueue
-
+            
             for _ in self.user_scripts:
-                self.url_queue.put((_, url))
+                self._enqueue_script(_, url.rstrip('/'))
+            
             return True
         except Exception as e:
             print '[_enqueue.exception] %s' % str(e)
@@ -367,6 +378,11 @@ class InfoDisScanner(object):
                 except Exception as e:
                     pass
             self.index_status, self.index_headers, self.index_html_doc = status, headers, html_doc    # save index content
+            soup = BeautifulSoup(self.index_html_doc, "html.parser")
+            for link in soup.find_all('a'):
+                url = link.get('href', '').strip()
+                self.index_a_urls.add(url)
+
         except Exception as e:
             logging.error('[request_index Exception] %s' % str(e))
             traceback.print_exc()
@@ -379,9 +395,8 @@ class InfoDisScanner(object):
             self.lang, self.framework = check_lang(self.base_url, self.index_headers)
 
         if self.lang == 'unknown':
-            soup = BeautifulSoup(self.index_html_doc, "html.parser")
-            for link in soup.find_all('a'):
-                url = link.get('href', '').strip()
+            for url in self.index_a_urls:
+                url, depth = cal_depth(self, url)
                 lang = check_lang_url(url)
                 if lang != 'unknown':
                     self.lang = lang
@@ -389,9 +404,7 @@ class InfoDisScanner(object):
         self.rewrite = check_rewrite(self.server, self.lang)
 
     def crawl_index(self):
-        soup = BeautifulSoup(self.index_html_doc, "html.parser")
-        for link in soup.find_all('a'):
-            url = link.get('href', '').strip()
+        for url in self.index_a_urls:
             url, depth = cal_depth(self, url)
             if depth <= self.max_depth:
                 self._enqueue(url)
@@ -399,7 +412,7 @@ class InfoDisScanner(object):
             self.results['/'] = []
             m = re.search('<title>(.*?)</title>', self.index_html_doc)
             title = m.group(1) if m else ''
-            _ = {'status': status, 'url': '%s%s' % (self.base_url, path), 'title': title}
+            _ = {'status': self.index_status, 'url': '%s%s' % (self.base_url, self.path), 'title': title}
             if _ not in self.results['/']:
                 self.results['/'].append(_)
 
@@ -436,6 +449,87 @@ class InfoDisScanner(object):
                 return True
         return False
 
+    def apply_rules(self, item):
+        url_description, tag, status_to_match, content_type, content_type_no, root_only, lang, rewrite = item
+        prefix = url_description['prefix']
+        url = url_description['full_url']
+        # print url
+        url = url.replace('{sub}', self.domain_sub)
+        if url.find('{hostname_or_folder}') >= 0:
+            _url = url[: url.find('{hostname_or_folder}')]
+            folders = _url.split('/')
+            for _folder in reversed(folders):
+                if _folder not in ['', '.', '..']:
+                    url = url.replace('{hostname_or_folder}', _folder)
+                    break
+        url = url.replace('{hostname_or_folder}', self.domain_sub)
+        url = url.replace('{hostname}', self.domain_sub)
+
+        if not item or not url:
+            return False, None, None, None
+
+        # print '[%s]' % url.strip()
+        try:
+            status, headers, html_doc = self._http_request(url)
+            cur_content_type = headers.get('content-type', '')
+
+            if self.find_exclude_text(html_doc):  # excluded text found
+                return False, status, headers, html_doc
+
+            if ('html' in cur_content_type or 'text' in cur_content_type) and \
+                                    0 <= len(html_doc) <= 10:  # text too short
+                return False, status, headers, html_doc
+
+            if cur_content_type.find('image/') >= 0:  # exclude image
+                return False, status, headers, html_doc
+
+            valid_item = False
+            if self.find_text(html_doc):
+                valid_item = True
+            else:
+                if cur_content_type.find('application/json') >= 0 and not url.endswith('.json'):  # no json
+                    return False, status, headers, html_doc
+
+                if status != status_to_match and status != 206: # status in [301, 302, 400, 404, 501, 502, 503, 505]
+                    return False, status, headers, html_doc
+
+                if tag:
+                    if html_doc.find(tag) >= 0:
+                        valid_item = True
+                    else:
+                        return False, status, headers, html_doc  # tag mismatch
+
+                if (content_type and cur_content_type.find(content_type) < 0) \
+                        or (content_type_no and cur_content_type.find(content_type_no) >= 0):
+                    return False, status, headers, html_doc  # type mismatch
+
+                if self.has_404 or status != self._404_status:
+                    if status_to_match in (200, 206) and status == 206:
+                        valid_item = True
+                    elif status_to_match and status != status_to_match:  # status mismatch
+                        return False, status, headers, html_doc
+                    elif status_to_match != 403 and status == 403:
+                        return False, status, headers, html_doc
+                    else:
+                        valid_item = True
+
+                if not self.has_404 and status in (200, 206) and url != '/' and not tag:
+                    _len = len(html_doc)
+                    _min = min(_len, self.len_404_doc)
+                    if _min == 0:
+                        _min = 10.0
+                    if float(_len - self.len_404_doc) / _min > 0.3:
+                        valid_item = True
+
+                if status == 206 and tag == '' and cur_content_type.find('text') < 0 and cur_content_type.find('html') < 0:
+                    valid_item = True
+
+            return valid_item, status, headers, html_doc
+
+        except Exception as e:
+            logging.error('[_scan_worker.Exception][3][%s] %s' % (url, str(e)))
+            traceback.print_exc()
+
     #
     def _scan_worker(self):
         while self.url_queue.qsize() > 0:
@@ -445,92 +539,25 @@ class InfoDisScanner(object):
                 return
             try:
                 item = self.url_queue.get(timeout=0.1)
-            except:
+            except Exception as e:
+                print e
                 return
             try:
                 if len(item) == 2:    # User Script
                     check_func = getattr(item[0], 'do_check')
                     check_func(self, item[1])
                     continue
-                else:
-                    url_description, tag, status_to_match, content_type, content_type_no, root_only = item
-                    prefix = url_description['prefix']
-                    url = url_description['full_url']
-                    # print url
-                    url = url.replace('{sub}', self.domain_sub)
-                    if url.find('{hostname_or_folder}') >= 0:
-                        _url = url[: url.find('{hostname_or_folder}')]
-                        folders = _url.split('/')
-                        for _folder in reversed(folders):
-                            if _folder not in ['', '.', '..']:
-                                url = url.replace('{hostname_or_folder}', _folder)
-                                break
-                    url = url.replace('{hostname_or_folder}', self.domain_sub)
-                    url = url.replace('{hostname}', self.domain_sub)
-
             except Exception as e:
                 logging.error('[_scan_worker Exception] [1] %s' % str(e))
                 traceback.print_exc()
                 continue
-            if not item or not url:
-                break
 
-            print '[%s]' % url.strip()
+            url_description, tag, status_to_match, content_type, content_type_no, root_only, lang, rewrite = item
+            prefix = url_description['prefix']
+            url = url_description['full_url']
+            valid_item, status, headers, html_doc = self.apply_rules(item)
+
             try:
-                status, headers, html_doc = self._http_request(url)
-                cur_content_type = headers.get('content-type', '')
-
-                if self.find_exclude_text(html_doc):  # excluded text found
-                    continue
-
-                if ('html' in cur_content_type or 'text' in cur_content_type) and \
-                                        0 <= len(html_doc) <= 10:  # text too short
-                    continue
-
-                if cur_content_type.find('image/') >= 0:  # exclude image
-                    continue
-
-                valid_item = False
-                if self.find_text(html_doc):
-                    valid_item = True
-                else:
-                    if cur_content_type.find('application/json') >= 0 and not url.endswith('.json'):  # no json
-                        continue
-
-                    if status != status_to_match and status != 206: # status in [301, 302, 400, 404, 501, 502, 503, 505]
-                        continue
-
-                    if tag:
-                        if html_doc.find(tag) >= 0:
-                            valid_item = True
-                        else:
-                            continue  # tag mismatch
-
-                    if content_type and cur_content_type.find(content_type) < 0 \
-                            or content_type_no and cur_content_type.find(content_type_no) >= 0:
-                        continue  # type mismatch
-
-                    if self.has_404 or status != self._404_status:
-                        if status_to_match in (200, 206) and status == 206:
-                            valid_item = True
-                        elif status_to_match and status != status_to_match:  # status mismatch
-                            continue
-                        elif status_to_match != 403 and status == 403:
-                            continue
-                        else:
-                            valid_item = True
-
-                    if not self.has_404 and status in (200, 206) and url != '/' and not tag:
-                        _len = len(html_doc)
-                        _min = min(_len, self.len_404_doc)
-                        if _min == 0:
-                            _min = 10.0
-                        if float(_len - self.len_404_doc) / _min > 0.3:
-                            valid_item = True
-
-                    if status == 206 and tag == '' and cur_content_type.find('text') < 0 and cur_content_type.find('html') < 0:
-                        valid_item = True
-
                 if valid_item:
                     m = re.search('<title>(.*?)</title>', html_doc)
                     title = m.group(1) if m else ''
@@ -538,7 +565,6 @@ class InfoDisScanner(object):
                     # print '[+] [Prefix:%s] [%s] %s' % (prefix, status, 'http://' + self.host +  url)
                     if prefix not in self.results:
                         self.results[prefix] = []
-
                     _ = {'status': status, 'url': '%s%s' % (self.base_url, url), 'title': title}
                     if _ not in self.results[prefix]:
                         self.results[prefix].append(_)
@@ -561,10 +587,11 @@ class InfoDisScanner(object):
                 all_threads.append(t)
             for t in all_threads:
                 t.join()
-
+            '''
             for key in self.results.keys():
                 if len(self.results[key]) > 5:  # Over 5 URLs found under this folder, show first only
                     self.results[key] = self.results[key][:1]
+            '''
             return '%s:%s' % (self.host, self.port), self.results
         except Exception as e:
             print '[scan exception] %s' % str(e)

@@ -11,7 +11,7 @@ from lib.common import save_user_script_result
 
 
 def do_check(self, url):
-    if url == '/' and self.conn_pool:
+    if url == '/' and self.conn_pool and self.lang == 'php':
         if self.index_html_doc.find('/wp-content/themes/') >= 0:
             url_lst = ['/wp-config.php.inc',
                        '/wp-config.inc',

@@ -11,7 +11,7 @@ from lib.common import save_user_script_result
 
 
 def do_check(self, url):
-    if url == '/' and self.conn_pool:
+    if url == '/' and self.conn_pool and self.lang == 'php':
         if self.index_status == 301 and self.index_headers.get('location', '').find('forum.php') >= 0 or \
                         str(self.index_headers).find('_saltkey=') > 0:
 

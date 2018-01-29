@@ -1,28 +1,28 @@
 
-/phpinfo.php   {tag="allow_url_fopen"}  {status=200}     {type="html"}
-/info.php      {tag="allow_url_fopen"}  {status=200}     {type="html"}
-/pi.php        {tag="allow_url_fopen"}  {status=200}     {type="html"}
-/i.php         {status=200}     {type="html"}
-/php.php       {status=200}     {type="html"}
-/mysql.php     {status=200}     {type="html"}
-/sql.php       {status=200}     {type="html"}
-/shell.php     {status=200}     {type="html"}
-/apc.php       {status=200}     {tag="<title>APC INFO"}
+/phpinfo.php   {tag="allow_url_fopen"}  {status=200}     {type="html"}    {lang="php"}
+/info.php      {tag="allow_url_fopen"}  {status=200}     {type="html"}    {lang="php"}
+/pi.php        {tag="allow_url_fopen"}  {status=200}     {type="html"}    {lang="php"}
+/i.php         {status=200}     {type="html"}    {lang="php"}
+/php.php       {status=200}     {type="html"}    {lang="php"}
+/mysql.php     {status=200}     {type="html"}    {lang="php"}
+/sql.php       {status=200}     {type="html"}    {lang="php"}
+/shell.php     {status=200}     {type="html"}    {lang="php"}
+/apc.php       {status=200}     {tag="<title>APC INFO"}    {lang="php"}
 
 
-/test.php      {status=200}     {type="html"}
-/test2.php     {status=200}     {type="html"}
+/test.php      {status=200}     {type="html"}    {lang="php"}
+/test2.php     {status=200}     {type="html"}    {lang="php"}
 /test.html     {status=200}     {type="html"}
 /test2.html    {status=200}     {type="html"}
 /test.txt      {status=200}     {type="text/plain"}
 /test2.txt     {status=200}     {type="text/plain"}
-/debug.php     {status=200}     {type="html"}
-/a.php         {status=200}     {type="html"}
-/b.php         {status=200}     {type="html"}
-/t.php         {status=200}     {type="html"}
+/debug.php     {status=200}     {type="html"}    {lang="php"}
+/a.php         {status=200}     {type="html"}    {lang="php"}
+/b.php         {status=200}     {type="html"}    {lang="php"}
+/t.php         {status=200}     {type="html"}    {lang="php"}
 
-/x.php         {status=200}   {type="html"}
-/1.php         {status=200}   {type="html"}
+/x.php         {status=200}   {type="html"}    {lang="php"}
+/1.php         {status=200}   {type="html"}    {lang="php"}
 
 
 # Test CGI     {tag="SERVER_NAME"}

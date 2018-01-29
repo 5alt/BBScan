@@ -6,12 +6,6 @@
 /core              {status=200}     {tag="ELF"}       {root_only}
 /crossdomain.xml   {status=200}     {tag="<allow-access-from domain="*""}   {type="xml"}    {root_only}
 /debug.txt         {status=200}     {type="text/plain"}    {root_only}
-/.bash_history     {status=206}     {type="application/octet-stream"}    {root_only}
-/.rediscli_history {status=206}     {type="application/octet-stream"}    {root_only}
-/.bashrc           {status=206}     {type="application/octet-stream"}    {root_only}
-/.bash_profile     {status=206}     {type="application/octet-stream"}    {root_only}
-/.bash_logout      {status=206}     {type="application/octet-stream"}    {root_only}
-/.vimrc            {status=206}     {type="application/octet-stream"}    {root_only}
 /.DS_Store         {status=206}     {type="application/octet-stream"}
 /.history          {status=206}     {type="application/octet-stream"}    {root_only}
 /.htaccess         {status=206}     {type="application/octet-stream"}    {root_only}
@@ -20,7 +14,6 @@
 /.htpasswd.bak     {status=206}     {type="application/octet-stream"}    {root_only}
 /htpasswd.bak      {status=206}     {type="application/octet-stream"}    {root_only}
 /nohup.out         {status=206}     {type="application/octet-stream"}    {root_only}
-/.mysql_history         {status=206}    {type="application/octet-stream"}    {root_only}
 /httpd.conf             {status=200}    {type_no="html"}    {root_only}
 /web.config             {status=206}    {type="application/octet-stream"}    {root_only}
 
@@ -35,12 +28,12 @@
 
 
 # Admin
-/admin.jsp    {status=200}    {root_only}
-/admin.php    {status=200}    {root_only}
-/admin.do     {status=200}    {root_only}
+/admin.jsp    {status=200}    {root_only}    {lang="java"}
+/admin.php    {status=200}    {root_only}    {lang="php"}
+/admin.do     {status=200}    {root_only}    {lang="java"}
 /admin.html   {status=200}    {root_only}
-/login.php    {status=200}    {tag="type="password""}    {root_only}
-/login.do     {status=200}    {tag="type="password""}    {root_only}
+/login.php    {status=200}    {tag="type="password""}    {root_only}    {lang="php"}
+/login.do     {status=200}    {tag="type="password""}    {root_only}    {lang="java"}
 
 
 # db config
@@ -52,19 +45,19 @@
 
 # /nagios/         
 # /kibana/
-/jmx-console/HtmlAdaptor       {status=200}   {tag="JBoss Management Console"}    {root_only}
+/jmx-console/HtmlAdaptor       {status=200}   {tag="JBoss Management Console"}    {root_only}    {lang="java"}
 /cacti/            {tag="<title>Login to Cacti</title>"}                          {root_only}
 /zabbix/           {tag="<title>Zabbix</title>"}                          {root_only}
-/jenkins/static/f3a41d2f/css/style.css	         {type="text/css"}        {status=200}    {tag="jenkins-home-link"}   {root_only}
-/static/f3a41d2f/css/style.css                   {type="text/css"}        {status=200}    {tag="jenkins-home-link"}   {root_only}
-/script		        {status=200}    {tag="Type in an arbitrary"}    {root_only}
-/jenkins/script		{status=200}    {tag="Type in an arbitrary"}    {root_only}
+/jenkins/static/f3a41d2f/css/style.css	         {type="text/css"}        {status=200}    {tag="jenkins-home-link"}   {root_only}    {lang="java"}
+/static/f3a41d2f/css/style.css                   {type="text/css"}        {status=200}    {tag="jenkins-home-link"}   {root_only}    {lang="java"}
+/script		        {status=200}    {tag="Type in an arbitrary"}    {root_only}    {lang="java"}
+/jenkins/script		{status=200}    {tag="Type in an arbitrary"}    {root_only}    {lang="java"}
 /exit                    {status=200}    {tag="<title>POST required</title>"}    {root_only}
-/memadmin/index.php      {tag="<title>Login - MemAdmin"}      {status=200}       {root_only}
-/phpmyadmin/index.php    {tag="<title>phpMyAdmin"}    {status=200}               {root_only}
-/phpMyAdmin/index.php    {tag="<title>phpMyAdmin"}    {status=200}               {root_only}
-/_phpmyadmin/index.php   {tag="<title>phpMyAdmin"}    {status=200}               {root_only}
-/pma/index.php           {tag="<title>phpMyAdmin"}    {status=200}               {root_only}
+/memadmin/index.php      {tag="<title>Login - MemAdmin"}      {status=200}       {root_only}    {lang="php"}
+/phpmyadmin/index.php    {tag="<title>phpMyAdmin"}    {status=200}               {root_only}    {lang="php"}
+/phpMyAdmin/index.php    {tag="<title>phpMyAdmin"}    {status=200}               {root_only}    {lang="php"}
+/_phpmyadmin/index.php   {tag="<title>phpMyAdmin"}    {status=200}               {root_only}    {lang="php"}
+/pma/index.php           {tag="<title>phpMyAdmin"}    {status=200}               {root_only}    {lang="php"}
 /ganglia/                {status=200}    {tag="<title>Ganglia"}                  {root_only}
 
 
@@ -84,9 +77,9 @@
 
 
 # Resin Doc
-/resin-doc/resource/tutorial/jndi-appconfig/test?inputFile=/etc/profile   {tag="/etc/profile.d/*.sh"}    {root_only}
-/resin-doc/viewfile/?contextpath=/&servletpath=&file=index.jsp            {tag="This is the default start page for the Resin server"}    {root_only}
-/resin-admin/	  {status=200}    {tag="<title>Resin Admin Login for"}    {root_only}
+/resin-doc/resource/tutorial/jndi-appconfig/test?inputFile=/etc/profile   {tag="/etc/profile.d/*.sh"}    {root_only}    {lang="java"}
+/resin-doc/viewfile/?contextpath=/&servletpath=&file=index.jsp            {tag="This is the default start page for the Resin server"}    {root_only}    {lang="java"}
+/resin-admin/	  {status=200}    {tag="<title>Resin Admin Login for"}    {root_only}    {lang="java"}
 
 
 # SVN and Git
@@ -95,17 +88,6 @@
 /.git/index           {status=200}    {tag="DIRC"}
 /.git/HEAD	          {status=200}    {tag="refs/heads/"}
 /.gitignore	          {status=206}
-
-
-# SSH
-/.ssh/known_hosts          {status=206}      {type="application/octet-stream"}   {root_only}
-/.ssh/id_rsa               {status=200}      {tag="PRIVATE KEY-"}       {root_only}
-/id_rsa                    {status=200}      {tag="PRIVATE KEY-"}       {root_only}
-/.ssh/id_rsa.pub           {status=200}      {tag="ssh-rsa"}            {root_only}
-/.ssh/id_dsa               {status=200}      {tag="PRIVATE KEY-"}       {root_only}
-/id_dsa                    {status=200}      {tag="PRIVATE KEY-"}       {root_only}
-/.ssh/id_dsa.pub           {status=200}      {tag="ssh-dss"}            {root_only}
-/.ssh/authorized_keys      {status=200}      {tag="ssh-rsa"}            {root_only}
 
 
 # Chang Log
@@ -132,11 +114,11 @@
 
 
 # Config
-/config.php               {status=200}     {type="html"}
-/config/config.php        {status=200}     {type="html"}
+/config.php               {status=200}     {type="html"}    {lang="php"}
+/config/config.php        {status=200}     {type="html"}    {lang="php"}
 /config.inc               {status=200}	   {type_no="html"}
-/config.php.bak           {status=206}	   {type="application/octet-stream"}
-/db.php.bak               {status=206}	   {type="application/octet-stream"}
+/config.php.bak           {status=206}	   {type="application/octet-stream"}    {lang="php"}
+/db.php.bak               {status=206}	   {type="application/octet-stream"}    {lang="php"}
 /conf/config.ini              {status=200}      {type_no="html"}   {tag="["}
 /config.ini                   {status=200}      {type_no="html"}   {tag="["}
 /config/config.ini            {status=200}      {type_no="html"}   {tag="["}
@@ -161,20 +143,20 @@
 /php.ini                     {status=200}    {type_no="html"}  {tag="["}
 /sftp-config.json	         {status=200}    {type="application/json"}   {tag="password"}
 
-/index.php.bak        {status=206}      {type="application/octet-stream"}           {tag="<?php"}
-/.index.php.swp       {status=206}      {type="application/octet-stream"}           {tag="<?php"}
+/index.php.bak        {status=206}      {type="application/octet-stream"}           {tag="<?php"}    {lang="php"}
+/.index.php.swp       {status=206}      {type="application/octet-stream"}           {tag="<?php"}    {lang="php"}
 /index.cgi.bak        {status=206}      {type="application/octet-stream"}
 
-/config.inc.php.bak      {status=206}      {type="application/octet-stream"}    {tag="<?php"}
-/.config.inc.php.swp     {status=206}      {type="application/octet-stream"}    {tag="<?php"}
+/config.inc.php.bak      {status=206}      {type="application/octet-stream"}    {tag="<?php"}    {lang="php"}
+/.config.inc.php.swp     {status=206}      {type="application/octet-stream"}    {tag="<?php"}    {lang="php"}
 
-/config/.config.php.swp  {status=200}    {tag="<?php"}
-/.config.php.swp         {status=200}    {tag="<?php"}
+/config/.config.php.swp  {status=200}    {tag="<?php"}    {lang="php"}
+/.config.php.swp         {status=200}    {tag="<?php"}    {lang="php"}
 
-/.settings.php.swp       {status=206}      {type="application/octet-stream"}           {tag="<?php"}
-/.database.php.swp       {status=206}      {type="application/octet-stream"}           {tag="<?php"}
-/.db.php.swp             {status=206}      {type="application/octet-stream"}           {tag="<?php"}
-/.mysql.php.swp          {status=206}      {type="application/octet-stream"}           {tag="<?php"}
+/.settings.php.swp       {status=206}      {type="application/octet-stream"}           {tag="<?php"}    {lang="php"}
+/.database.php.swp       {status=206}      {type="application/octet-stream"}           {tag="<?php"}    {lang="php"}
+/.db.php.swp             {status=206}      {type="application/octet-stream"}           {tag="<?php"}    {lang="php"}
+/.mysql.php.swp          {status=206}      {type="application/octet-stream"}           {tag="<?php"}    {lang="php"}
 
 /{hostname_or_folder}.ini                    {status=206}      {type="application"}   {tag="["}
 /../{hostname_or_folder}.ini                 {status=206}      {type="application"}   {tag="["}
@@ -182,8 +164,8 @@
 
 
 # upload
-/upload.do     {status=200}    {type="html"}    {tag="type="file""}    {root_only}
-/upload.jsp    {status=200}    {type="html"}    {tag="type="file""}    {root_only}
-/upload.php    {status=200}    {type="html"}    {tag="type="file""}    {root_only}
-/upfile.php    {status=200}    {type="html"}    {tag="type="file""}    {root_only}
+/upload.do     {status=200}    {type="html"}    {tag="type="file""}    {root_only}    {lang=“java”}
+/upload.jsp    {status=200}    {type="html"}    {tag="type="file""}    {root_only}    {lang=“java”}
+/upload.php    {status=200}    {type="html"}    {tag="type="file""}    {root_only}    {lang="php"}
+/upfile.php    {status=200}    {type="html"}    {tag="type="file""}    {root_only}    {lang="php"}
 /upload.html   {status=200}    {type="html"}    {tag="type="file""}    {root_only}

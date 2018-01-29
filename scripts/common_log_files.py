@@ -22,7 +22,7 @@ from lib.common import save_user_script_result
 
 
 def do_check(self, url):
-    if url == '/' and self.conn_pool:
+    if url == '/' and self.conn_pool and not self.rewrite:
         folders = ['']
         for log_folder in ['log', 'logs', '_log', '_logs', 'access-log', 'errorlog']:
             status, headers, html_doc = self._http_request('/' + log_folder)
