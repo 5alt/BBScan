@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 '''
-在配置 Nginx 和 Apache 的时候错误的将目录映射到了 /
-主要检测 /etc/passwd
+Nginx 在解析静态文件时，把 web-inf 目录映射进去，若没有做 nginx 相关安全配置或由
+于 nginx 自身缺陷影响，将导致通过 nginx 访问到 tomcat 的 web-inf 目录。
 '''
 
 from lib.common import save_user_script_result

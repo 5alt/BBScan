@@ -89,6 +89,7 @@
 /.git/HEAD	          {status=200}    {tag="refs/heads/"}
 /.gitignore	          {status=206}
 
+/CVS/Entries    {status=200}
 
 # Chang Log
 /readme               {status=200}      {type_no="html"}
